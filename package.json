@@ -1,0 +1,16 @@
+{
+  "name": "github-pusher-tool",
+  "version": "1.0.0",
+  "description": "Classroom tool: students submit code, teacher's GitHub token pushes it to a locked-down practice repo.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "dotenv": "^17.2.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
