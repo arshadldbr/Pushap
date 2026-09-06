@@ -5,7 +5,9 @@ ever handing them a real GitHub token.
 
 ## How it works
 
-- Each student gets their own **access code** (defined in `codes.json`).
+- Each student gets their own **access code** — managed from your existing
+  **admin panel** (the same one used for TTS license keys), in a new
+  "Student Codes" section. Codes live in Firestore, not a local file.
 - They open the web page, paste in a file path + content (usually something
   Claude generated for them), and hit **Push to GitHub**.
 - The server — using **your** GitHub token, stored only in `.env` — pushes
@@ -29,15 +31,15 @@ ever handing them a real GitHub token.
    - `REPO_OWNER` / `REPO_NAME` — your practice repo (create a fresh, empty
      one just for this — never point this at a real production repo).
    - `ADMIN_PASSWORD` — your own password for viewing the push log.
+   - Firebase credentials: either leave `FIREBASE_SERVICE_ACCOUNT_KEY` blank
+     and place the same service account key you use for your TTS app at
+     `secrets/serviceAccountKey.json`, or paste the full JSON into
+     `FIREBASE_SERVICE_ACCOUNT_KEY` (for hosts without file uploads).
 
-3. Edit `codes.json` — give each student their own code:
-   ```json
-   {
-     "ALI-101": "Ali Khan",
-     "SARA-102": "Sara Ahmed"
-   }
-   ```
-   To revoke a student, just delete their line and redeploy/restart.
+3. Manage students from your admin panel — the same one used for TTS license
+   keys now has a **"Student Codes"** section. Generate a code + name there;
+   to revoke a student, mark their code inactive (or delete it) — no
+   redeploy needed, takes effect immediately.
 
 4. Run locally:
    ```

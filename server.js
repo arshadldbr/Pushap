@@ -2,6 +2,7 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs");
 require("dotenv").config();
+const { getDb } = require("./lib/firebaseAdmin");
 
 const app = express();
 app.use(express.json({ limit: "5mb" }));
@@ -19,14 +20,17 @@ if (!REPO_OWNER || !REPO_NAME || !GITHUB_TOKEN) {
   console.error("Missing REPO_OWNER, REPO_NAME, or GITHUB_TOKEN in environment.");
 }
 
-// --- Student access codes, loaded from codes.json: { "CODE123": "Student Name" } ---
-function loadCodes() {
-  try {
-    const raw = fs.readFileSync(path.join(__dirname, "codes.json"), "utf-8");
-    return JSON.parse(raw);
-  } catch {
-    return {};
-  }
+// --- Student access codes now live in Firestore (collection: "studentCodes"),
+// managed from the same admin panel as the TTS license keys. Document ID is
+// the code itself; fields: { studentName, active }.
+async function lookupCode(code) {
+  if (!code) return null;
+  const db = getDb();
+  const doc = await db.collection("studentCodes").doc(code.trim()).get();
+  if (!doc.exists) return null;
+  const data = doc.data();
+  if (data.active === false) return null;
+  return data.studentName || "Unknown Student";
 }
 
 // --- Simple append-only log so the teacher can see who pushed what ---
@@ -54,11 +58,16 @@ function isSafePath(filePath) {
 app.post("/api/push", async (req, res) => {
   const { code, filePath, content, commitMessage } = req.body || {};
 
-  const codes = loadCodes();
-  const studentName = codes[code];
+  let studentName;
+  try {
+    studentName = await lookupCode(code);
+  } catch (err) {
+    console.error("Firestore lookup error:", err);
+    return res.status(500).json({ success: false, error: "Could not verify code right now. Please try again." });
+  }
 
   if (!studentName) {
-    return res.status(403).json({ success: false, error: "Invalid access code." });
+    return res.status(403).json({ success: false, error: "Invalid or inactive access code." });
   }
 
   if (!isSafePath(filePath)) {

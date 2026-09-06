@@ -3,3 +3,5 @@ node_modules/
 .env.*
 !.env.example
 push-log.json
+secrets/
+serviceAccountKey.json
