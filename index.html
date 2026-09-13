@@ -74,16 +74,21 @@
   .log-info { color: var(--muted); }
   .hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
   .filelist { font-size: 11.5px; color: var(--muted); margin-top: 6px; max-height: 100px; overflow-y: auto; }
+  #brandingFooter {
+    max-width: 560px; margin: 16px auto 0; text-align: center;
+    font-size: 12px; color: var(--muted); line-height: 1.6;
+  }
+  #brandingFooter a { color: var(--accent); text-decoration: none; font-weight: 600; }
 </style>
 </head>
 <body>
 <div class="card">
   <h1>🔄 Repo Sync</h1>
-  <p class="sub">Apna GitHub token yahan browser mein hi rehta hai — kisi server ko nahi jata. Seedha aap ke apne repo ko update karta hai.</p>
+  <p class="sub">Your GitHub token stays right here in your browser — it never goes to any server. It updates your own repo directly.</p>
 
   <label>GitHub Personal Access Token</label>
   <input type="password" id="token" placeholder="github_pat_..." autocomplete="off" />
-  <p class="hint">Fine-grained token, sirf apni target repo tak "Contents: Read and write" permission ke sath banayein.</p>
+  <p class="hint">Create a fine-grained token with "Contents: Read and write" permission, scoped only to your target repo.</p>
 
   <label>Repo Owner (username)</label>
   <input type="text" id="owner" placeholder="arshadldbr" autocapitalize="off" />
@@ -97,7 +102,7 @@
   <div class="tabs">
     <button class="tab-btn active" data-mode="zip">📦 Zip Upload</button>
     <button class="tab-btn" data-mode="files">📁 Files / Folder</button>
-    <button class="tab-btn" data-mode="single">📄 Ek File</button>
+    <button class="tab-btn" data-mode="single">📄 Single File</button>
   </div>
 
   <!-- ZIP MODE -->
@@ -108,33 +113,33 @@
 
   <!-- LOOSE FILES / FOLDER MODE -->
   <div class="mode-section" id="mode-files">
-    <label>Poora Folder Select Karein (structure preserve hoga)</label>
+    <label>Select an Entire Folder (structure is preserved)</label>
     <input type="file" id="folderFiles" webkitdirectory multiple />
-    <p class="hint">Yeh poori folder (sub-folders sameet) select karta hai, structure bilkul waisa hi rahega.</p>
+    <p class="hint">This selects the whole folder (including sub-folders) — the structure stays exactly the same.</p>
 
-    <label>Ya Alag-Alag Individual Files Select Karein</label>
+    <label>Or Select Individual Loose Files</label>
     <input type="file" id="looseFiles" multiple />
-    <p class="hint">Yeh sirf inn files ko unke naam se root mein push karega (koi folder-path nahi hoga).</p>
+    <p class="hint">This pushes only these files to the root, using their filenames (no folder path).</p>
 
     <div class="filelist" id="filePreview"></div>
   </div>
 
   <!-- SINGLE FILE MODE -->
   <div class="mode-section" id="mode-single">
-    <label>File Path (jaisa: src/App.tsx)</label>
+    <label>File Path (e.g. src/App.tsx)</label>
     <input type="text" id="filePath" placeholder="src/App.tsx" autocapitalize="off" />
     <label>File Content</label>
-    <textarea id="fileContent" placeholder="Naya content yahan paste karein"></textarea>
+    <textarea id="fileContent" placeholder="Paste the new content here"></textarea>
   </div>
 
   <div class="checkbox-row" id="stripLeadingRow">
     <input type="checkbox" id="stripLeading" checked />
-    <label for="stripLeading">Agar sab files ek hi folder ke andar hain, uska naam khud hata dein (taake files seedha repo root mein jayen, jaisa aap chahte hain zyada tar situations mein)</label>
+    <label for="stripLeading">If all files are inside one folder, automatically strip its name (so files land directly in the repo root, as most people want)</label>
   </div>
 
   <div class="checkbox-row" id="deleteExtraRow">
     <input type="checkbox" id="deleteExtra" checked />
-    <label for="deleteExtra">Repo ko is upload se poori tarah match karein — purani files jo ab maujood nahi hain, unhein hata dein (delete se pehle ek confirmation dikhega)</label>
+    <label for="deleteExtra">Make the repo fully match this upload — remove old files no longer present (a confirmation will show before deleting)</label>
   </div>
 
   <label>Commit Message</label>
@@ -143,6 +148,16 @@
   <button class="primary" id="pushBtn">Push to GitHub</button>
 
   <div id="log"></div>
+</div>
+
+<div id="brandingFooter">
+  <div><b>Developed / Made by: A.K.A Tech</b></div>
+  <div>A Company by Arshad Khan Aastik</div>
+  <div>
+    <a href="https://wa.me/923149891182" target="_blank" rel="noopener noreferrer">WhatsApp: +92 314 9891182</a>
+    &nbsp;|&nbsp;
+    <a href="mailto:arshadlaidbeer@gmail.com">arshadlaidbeer@gmail.com</a>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -276,17 +291,17 @@
     if (stripLeading) entries = stripCommonLeadingFolder(entries);
 
     if (entries.length === 0) {
-      log("Koi file nahi mili push karne ke liye.", "err");
+      log("No files found to push.", "err");
       return;
     }
 
-    log(`${entries.length} files milin. Push shuru ho raha hai...`, "info");
+    log(`${entries.length} files found. Starting push...`, "info");
     const pushedPaths = [];
 
     for (const entry of entries) {
       const sizeBytes = Math.ceil((entry.base64.length * 3) / 4);
       if (sizeBytes > MAX_FILE_BYTES) {
-        log(`⏭️ Skip (1MB se badi hai): ${entry.path}`, "warn");
+        log(`⏭️ Skipped (larger than 1MB): ${entry.path}`, "warn");
         continue;
       }
       try {
@@ -300,7 +315,7 @@
     }
 
     if (deleteExtra) {
-      log("Repo ki current files check ki ja rahi hain deletion ke liye...", "info");
+      log("Checking the repo's current files for deletion...", "info");
       const existingPaths = await listAllRepoFiles(owner, repo, branch, token);
       const toDelete = existingPaths.filter((p) => !pushedPaths.includes(p));
 
@@ -310,7 +325,7 @@
           `Yeh ${toDelete.length} file(s) permanently DELETE ho jayengi:\n\n${preview}\n\nJaari rakhein?`
         );
         if (!confirmed) {
-          log("Deletion cancel kar di gayi — baaqi sab kaam ho chuka hai.", "warn");
+          log("Deletion cancelled — everything else is already done.", "warn");
           return;
         }
       }
@@ -328,7 +343,7 @@
       }
     }
 
-    log("🎉 Mukammal ho gaya!", "ok");
+    log("🎉 All done!", "ok");
   }
 
   function readFileAsBase64(file) {
@@ -349,12 +364,12 @@
     const { token, owner, repo, branch, commitMessage, deleteExtra, stripLeading } = getCommonFields();
     const fileInput = document.getElementById("zipFile");
     if (!fileInput.files.length) {
-      log("Zip file zaroori hai.", "err");
+      log("A zip file is required.", "err");
       return;
     }
 
     const file = fileInput.files[0];
-    log(`Zip file parse ho raha hai: ${file.name}...`, "info");
+    log(`Parsing zip file: ${file.name}...`, "info");
     const zip = await JSZip.loadAsync(file);
     const zipEntries = Object.values(zip.files).filter((e) => !e.dir);
 
@@ -373,7 +388,7 @@
     const looseFiles = Array.from(document.getElementById("looseFiles").files);
 
     if (folderFiles.length === 0 && looseFiles.length === 0) {
-      log("Koi folder ya file select nahi ki gayi.", "err");
+      log("No folder or file was selected.", "err");
       return;
     }
 
@@ -396,7 +411,7 @@
     const content = document.getElementById("fileContent").value;
 
     if (!filePath || !content) {
-      log("File path aur content zaroori hain.", "err");
+      log("File path and content are required.", "err");
       return;
     }
 
@@ -405,7 +420,7 @@
       const sha = await getFileSha(owner, repo, branch, filePath, token);
       await putFile(owner, repo, branch, filePath, base64, commitMessage, token, sha);
       log(`✅ ${sha ? "Updated" : "Created"}: ${filePath}`, "ok");
-      log("🎉 Mukammal ho gaya!", "ok");
+      log("🎉 All done!", "ok");
     } catch (err) {
       log(`❌ Failed: ${err.message}`, "err");
     }
@@ -427,7 +442,7 @@
     const { token, owner, repo } = getCommonFields();
     if (!token || !owner || !repo) {
       clearLog();
-      log("Token, owner, aur repo zaroori hain.", "err");
+      log("Token, owner, and repo are required.", "err");
       return;
     }
 
